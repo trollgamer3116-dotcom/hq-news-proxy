@@ -134,13 +134,17 @@ function absolutize(doc, base) {
   }
 }
 // Remove interactive embeds / promo blocks that Readability would otherwise keep (quizzes, polls, newsletter boxes).
-const JUNK_TOKEN = /(^|[-_])(quiz|poll|newsletter|signup|recirc|outbrain|taboola|sponsored|advert|ad-slot|social-share|share-bar)([-_]|$)/i;
+const JUNK_TOKEN = /(^|[-_])(quiz|poll|newsletter|signup|login|user-box|author-bio|recirc|outbrain|taboola|sponsored|advert|ad-slot|social-share|share-bar)([-_]|$)/i;
 const KEEP_TAGS = new Set(['HTML', 'BODY', 'MAIN', 'ARTICLE']);
 function stripWidgets(doc) {
   for (const el of [...doc.querySelectorAll('[class],[id]')]) {
     if (KEEP_TAGS.has(el.tagName) || !el.isConnected) continue;
     const tokens = ((el.getAttribute('class') || '') + ' ' + (el.id || '')).split(/\s+/);
     if (tokens.some(t => JUNK_TOKEN.test(t))) el.remove();
+  }
+  // data-nosnippet marks text publishers keep out of search snippets: short ones are bios/promos, not the story.
+  for (const el of [...doc.querySelectorAll('[data-nosnippet]')]) {
+    if (!KEEP_TAGS.has(el.tagName) && el.isConnected && (el.textContent || '').trim().length < 1200) el.remove();
   }
   for (const input of [...doc.querySelectorAll('input[type=radio],input[type=checkbox]')]) {
     const box = input.parentElement;
