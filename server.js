@@ -133,15 +133,31 @@ function absolutize(doc, base) {
     if (lazy && (!img.getAttribute('src') || /^data:/.test(img.getAttribute('src')))) { try { img.setAttribute('src', new URL(lazy, base).toString()); } catch {} }
   }
 }
+// Remove interactive embeds / promo blocks that Readability would otherwise keep (quizzes, polls, newsletter boxes).
+const JUNK_TOKEN = /(^|[-_])(quiz|poll|newsletter|signup|recirc|outbrain|taboola|sponsored|advert|ad-slot|social-share|share-bar)([-_]|$)/i;
+const KEEP_TAGS = new Set(['HTML', 'BODY', 'MAIN', 'ARTICLE']);
+function stripWidgets(doc) {
+  for (const el of [...doc.querySelectorAll('[class],[id]')]) {
+    if (KEEP_TAGS.has(el.tagName) || !el.isConnected) continue;
+    const tokens = ((el.getAttribute('class') || '') + ' ' + (el.id || '')).split(/\s+/);
+    if (tokens.some(t => JUNK_TOKEN.test(t))) el.remove();
+  }
+  for (const input of [...doc.querySelectorAll('input[type=radio],input[type=checkbox]')]) {
+    const box = input.parentElement;
+    if (box && box.isConnected && !KEEP_TAGS.has(box.tagName) && box.querySelectorAll('input').length >= 4) box.remove();
+  }
+  for (const el of [...doc.querySelectorAll('form,button,select,textarea,input,dialog')]) if (el.isConnected) el.remove();
+}
 function extract(html, url) {
   const { document } = parseHTML(html);
   const leadImage = meta(document, 'og:image', 'twitter:image', 'og:image:url');
   const siteName = meta(document, 'og:site_name', 'application-name');
   const published = meta(document, 'article:published_time', 'parsely-pub-date', 'date');
+  stripWidgets(document);
   absolutize(document, url);
   const art = new Readability(document, { charThreshold: 400 }).parse();
   if (!art || !art.content) return null;
-  const text = (art.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
+  const text = (art.textContent || '').split('\n').map(l => l.replace(/\s+/g, ' ').trim()).join('\n').replace(/\n{3,}/g, '\n\n').trim();
   let img = leadImage;
   try { if (img) img = new URL(img, url).toString(); } catch { img = ''; }
   return {
