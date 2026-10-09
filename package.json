@@ -1,0 +1,14 @@
+{
+  "name": "hq-news-proxy",
+  "version": "1.0.0",
+  "description": "Tiny full-article reader endpoint for Aarav's HQ",
+  "main": "server.js",
+  "type": "commonjs",
+  "engines": { "node": ">=20" },
+  "scripts": { "start": "node server.js" },
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0",
+    "linkedom": "^0.18.13"
+  },
+  "license": "MIT"
+}
